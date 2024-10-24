@@ -1,26 +1,30 @@
+// Register.js
 'use client';
 
 import { useState } from 'react';
+import { auth } from '../lib/firebaseConfig';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { useRouter } from 'next/navigation'; // Import useRouter for navigation
 
 export default function Register() {
-    const [username, setUsername] = useState('');
+    const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [confirmPassword, setConfirmPassword] = useState('');
     const [message, setMessage] = useState('');
+    const router = useRouter(); // Initialize router for navigation
 
-    const handleRegister = (e) => {
+    const handleRegister = async (e) => {
         e.preventDefault();
+        setMessage(''); // Clear previous messages
 
-        if (password !== confirmPassword) {
-            setMessage('Passwords do not match!');
-            return;
+        try {
+            await createUserWithEmailAndPassword(auth, email, password);
+            setMessage('Registration successful!');
+            // Optionally redirect to the login page after successful registration
+            // router.push('/login');
+        } catch (error) {
+            setMessage(`Error: ${error.message}`);
+            // Handle registration error accordingly
         }
-
-        localStorage.setItem(username, password); // Save the username and password locally
-        setMessage('Registration successful! You can now log in.');
-        setUsername('');
-        setPassword('');
-        setConfirmPassword('');
     };
 
     return (
@@ -29,11 +33,11 @@ export default function Register() {
                 <h1 className="text-3xl font-bold mb-6 text-center">Register</h1>
                 <form onSubmit={handleRegister} className="space-y-4">
                     <div>
-                        <label className="block mb-2 text-sm font-medium">Username:</label>
+                        <label className="block mb-2 text-sm font-medium">Email:</label>
                         <input
-                            type="text"
-                            value={username}
-                            onChange={(e) => setUsername(e.target.value)}
+                            type="email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
                             className="w-full px-4 py-2 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                         />
                     </div>
@@ -46,15 +50,6 @@ export default function Register() {
                             className="w-full px-4 py-2 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                         />
                     </div>
-                    <div>
-                        <label className="block mb-2 text-sm font-medium">Confirm Password:</label>
-                        <input
-                            type="password"
-                            value={confirmPassword}
-                            onChange={(e) => setConfirmPassword(e.target.value)}
-                            className="w-full px-4 py-2 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                        />
-                    </div>
                     <button
                         type="submit"
                         className="w-full py-2 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-500 transition-colors"
@@ -63,6 +58,15 @@ export default function Register() {
                     </button>
                 </form>
                 {message && <p className="mt-4 text-center text-red-500">{message}</p>}
+                <p className="mt-4 text-center text-sm">
+                    Already have an account?{' '}
+                    <button
+                        onClick={() => router.push('/login')} // Navigate to the login page
+                        className="text-indigo-500 hover:underline"
+                    >
+                        Login here
+                    </button>
+                </p>
             </div>
         </div>
     );

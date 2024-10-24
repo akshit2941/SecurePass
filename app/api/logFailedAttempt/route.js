@@ -2,41 +2,57 @@ import fs from 'fs';
 import path from 'path';
 import { NextResponse } from 'next/server';
 
-export async function POST(request) {
-    const { username, attemptedPassword } = await request.json();
+// Define paths for JSON and CSV files
+const jsonFilePath = path.join(process.cwd(), 'failedAttempts.json');
+const csvFilePath = path.join(process.cwd(), 'failedAttempts.csv');
 
-    // Path to the JSON file where we'll log failed attempts
-    const jsonFilePath = path.join(process.cwd(), 'failedAttempts.json');
-    const csvFilePath = path.join(process.cwd(), 'failedAttempts.csv');
+// Function to create a new failed attempt object
+const createFailedAttempt = (email, attemptedPassword) => {
+    return {
+        email,  // Change from username to email
+        attemptedPassword,
+        time: new Date().toLocaleString(),
+    };
+};
 
-    // Read existing JSON data or initialize an empty array
+// Function to log failed attempts in JSON format
+const logToJSON = (newAttempt) => {
     const existingData = fs.existsSync(jsonFilePath)
         ? JSON.parse(fs.readFileSync(jsonFilePath, 'utf8'))
         : [];
 
-    const newAttempt = {
-        username,
-        attemptedPassword,
-        time: new Date().toLocaleString(),
-    };
-
-    // Add the new attempt to the JSON data
     existingData.push(newAttempt);
-
-    // Write the updated data to the JSON file
     fs.writeFileSync(jsonFilePath, JSON.stringify(existingData, null, 2), 'utf8');
+};
 
-    // Also log the attempt to a CSV file
-    const csvHeader = 'Username,AttemptedPassword,Time\n';
-    const csvData = `${username},${attemptedPassword},${new Date().toLocaleString()}\n`;
+// Function to log failed attempts in CSV format
+const logToCSV = (newAttempt) => {
+    const csvHeader = 'Email,AttemptedPassword,Time\n'; // Changed Username to Email
+    const csvData = `${newAttempt.email},${newAttempt.attemptedPassword},${newAttempt.time}\n`;
 
-    // If CSV file doesn't exist, create it with the header
+    // Create CSV file if it doesn't exist
     if (!fs.existsSync(csvFilePath)) {
         fs.writeFileSync(csvFilePath, csvHeader, 'utf8');
     }
 
-    // Append the new attempt to the CSV file
+    // Append new attempt to the CSV file
     fs.appendFileSync(csvFilePath, csvData, 'utf8');
+};
 
-    return NextResponse.json({ message: 'Failed attempt logged' });
+export async function POST(request) {
+    try {
+        const { attemptedEmail, attemptedPassword } = await request.json();
+
+        // Create a new failed attempt object
+        const newAttempt = createFailedAttempt(attemptedEmail, attemptedPassword); // Changed username to attemptedEmail
+
+        // Log the failed attempt to both JSON and CSV
+        logToJSON(newAttempt);
+        logToCSV(newAttempt);
+
+        return NextResponse.json({ message: 'Failed attempt logged' }, { status: 200 });
+    } catch (error) {
+        console.error('Error logging failed attempt:', error);
+        return NextResponse.json({ error: 'Failed to log attempt' }, { status: 500 });
+    }
 }
