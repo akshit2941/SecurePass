@@ -8,30 +8,29 @@ import { useRouter } from 'next/navigation';
 export default function Profile() {
     const [user, setUser] = useState(null);
     const [failedAttempts, setFailedAttempts] = useState([]);
-    const router = useRouter(); // For navigation
+    const router = useRouter();
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
             if (user) {
                 setUser(user);
-                await fetchFailedAttempts(); // Fetch failed attempts when the user is authenticated
+                await fetchFailedAttempts(user.email);
             } else {
-                router.push('/login'); // Redirect to login if not authenticated
+                router.push('/login');
             }
         });
 
-        return () => unsubscribe(); // Clean up the subscription on unmount
+        return () => unsubscribe();
     }, [router]);
 
-    // Fetch failed attempts from the API
-    const fetchFailedAttempts = async () => {
+    const fetchFailedAttempts = async (email) => {
         try {
-            const response = await fetch('/api/getFailedAttempts'); // Adjust this to your API route
+            const response = await fetch('/api/getFailedAttempts');
             const data = await response.json();
 
-            // Check if the response has attempts
             if (data.attempts) {
-                setFailedAttempts(data.attempts);
+                const userAttempts = data.attempts.filter(attempt => attempt.email === email);
+                setFailedAttempts(userAttempts);
             } else {
                 console.error('Failed attempts data is not valid:', data);
             }
@@ -44,13 +43,12 @@ export default function Profile() {
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-gray-900">
-            <div className="bg-gray-800 text-white p-8 rounded-lg shadow-lg max-w-md w-full">
+            <div className="bg-gray-800 text-white p-10 rounded-lg shadow-lg max-w-md w-full">
                 <h1 className="text-3xl font-bold mb-6 text-center">Profile</h1>
                 <p className="mb-4">Welcome, {user.displayName || user.email}!</p>
                 <p>Email: {user.email}</p>
                 <p>UID: {user.uid}</p>
 
-                {/* Display failed login attempts */}
                 <h2 className="text-xl font-semibold mt-6">Failed Login Attempts:</h2>
                 <ul>
                     {failedAttempts.length > 0 ? (
@@ -68,10 +66,10 @@ export default function Profile() {
 
                 <button
                     onClick={() => {
-                        auth.signOut(); // Sign out the user
-                        router.push('/login'); // Redirect to login
+                        auth.signOut();
+                        router.push('/login');
                     }}
-                    className="mt-4 w-full py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-500 transition-colors"
+                    className="mt-4 w-full py-3 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-500 transition-colors"
                 >
                     Logout
                 </button>
